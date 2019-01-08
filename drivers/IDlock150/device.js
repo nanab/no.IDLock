@@ -27,6 +27,21 @@ class IDlock150 extends ZwaveDevice {
 					awaymodeTrigger.trigger(thisVar, null, null).catch( thisVar.error ).then( thisVar.log('Awaymode active') )
 				}		
 		}
+		//if manual unlock disable awaymode
+		async function disableAwaymode(thisVar){
+			let awayConfig = await thisVar.configurationGet({index: 1}).catch( thisVar.error );
+			thisVar.log(awayConfig['Configuration Value'][0]);
+			//if "Enable Away Manual Lock" is active set "Disable Away Manual Lock"
+			if (awayConfig['Configuration Value'][0] === 2){
+				let response = await thisVar.configurationSet({id: 'Doorlock_mode'}, 0);
+				thisVar.log(response);
+			}
+			//if "Enable Away Auto Lock" is active set "Disable Away Auto Lock"
+			if (awayConfig['Configuration Value'][0] === 3){
+				let response = await thisVar.configurationSet({id: 'Doorlock_mode'}, 1);
+				thisVar.log(response);
+			}
+		}
 		
 		this.registerCapability('locked', 'DOOR_LOCK', {
 			getOpts: {
@@ -96,6 +111,8 @@ class IDlock150 extends ZwaveDevice {
 					}
 					if (report['Event (Parsed)'] === 'Manual Unlock Operation') {
 						unlockTrigger.trigger(this, {"who":"Button"}, null).catch( this.error ).then( this.log('Homey opened the door') )
+						//wait 10 sec before disable awaymode. so the lock can handle the request 
+						setTimeout(disableAwaymode, 10000, this);
 					}
 					if (report['Event (Parsed)'] === 'Manual Lock Operation') {
 						//wait 20 sec then call function to check if away mode is activated and if active trigger flowcard.																													
