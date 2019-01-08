@@ -9,13 +9,25 @@ class IDlock150 extends ZwaveDevice {
 	onMeshInit() {
 		let unlockTrigger = new Homey.FlowCardTriggerDevice('lockstate');
 		unlockTrigger.register();
+		let awaymodeTrigger = new Homey.FlowCardTriggerDevice('awaymode');
+		awaymodeTrigger.register();
 
 		// enable debugging
 		this.enableDebug();
-
+	
 		// print the node's info to the console
 		this.printNode();
 
+		//read out configuration for awaymode
+		async function getAwaymode(thisVar){
+				let awayConfig = await thisVar.configurationGet({index: 1}).catch( thisVar.error );
+				thisVar.log(awayConfig['Configuration Value'][0]);
+				if (awayConfig['Configuration Value'][0] === 2 || awayConfig['Configuration Value'][0] === 3){
+					thisVar.log('awaymodeactive');
+					awaymodeTrigger.trigger(thisVar, null, null).catch( thisVar.error ).then( thisVar.log('Awaymode active') )
+				}		
+		}
+		
 		this.registerCapability('locked', 'DOOR_LOCK', {
 			getOpts: {
 				getOnStart: true,
@@ -85,6 +97,10 @@ class IDlock150 extends ZwaveDevice {
 					if (report['Event (Parsed)'] === 'Manual Unlock Operation') {
 						unlockTrigger.trigger(this, {"who":"Button"}, null).catch( this.error ).then( this.log('Homey opened the door') )
 					}
+					if (report['Event (Parsed)'] === 'Manual Lock Operation') {
+						//wait 20 sec then call function to check if away mode is activated and if active trigger flowcard.																													
+						setTimeout(getAwaymode, 20000, this);
+					}					
 				}
 				return null;
 			}
