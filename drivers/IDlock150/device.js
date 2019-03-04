@@ -9,40 +9,46 @@ class IDlock150 extends ZwaveDevice {
 	onMeshInit() {
 		let unlockTrigger = new Homey.FlowCardTriggerDevice('lockstate');
 		unlockTrigger.register();
-		let awaymodeTrigger = new Homey.FlowCardTriggerDevice('awaymode');
-		awaymodeTrigger.register();
-
+		let awaymodeCheckCondition = new Homey.FlowCardCondition('awaymode_check');
+		awaymodeCheckCondition.register();
+		let disableAwaymodeAction = new Homey.FlowCardAction('awaymode_disable');
+		disableAwaymodeAction.register();
 		// enable debugging
 		this.enableDebug();
 	
 		// print the node's info to the console
 		this.printNode();
-
-		//read out configuration for awaymode
-		async function getAwaymode(thisVar){
-				let awayConfig = await thisVar.configurationGet({index: 1}).catch( thisVar.error );
-				thisVar.log(awayConfig['Configuration Value'][0]);
-				if (awayConfig['Configuration Value'][0] === 2 || awayConfig['Configuration Value'][0] === 3){
-					thisVar.log('awaymodeactive');
-					awaymodeTrigger.trigger(thisVar, null, null).catch( thisVar.error ).then( thisVar.log('Awaymode active') )
-				}		
-		}
-		//if manual unlock disable awaymode
-		async function disableAwaymode(thisVar){
-			let awayConfig = await thisVar.configurationGet({index: 1}).catch( thisVar.error );
-			thisVar.log(awayConfig['Configuration Value'][0]);
+	
+		//Action for disable awaymode
+		disableAwaymodeAction.registerRunListener( async ( args, state ) => {
+			let awayConfig = await this.configurationGet({index: 1}).catch( this.error );
+			this.log(awayConfig['Configuration Value'][0]);
 			//if "Enable Away Manual Lock" is active set "Disable Away Manual Lock"
 			if (awayConfig['Configuration Value'][0] === 2){
-				let response = await thisVar.configurationSet({id: 'Doorlock_mode'}, 0);
-				thisVar.log(response);
+				let response = await this.configurationSet({id: 'Doorlock_mode'}, 0);
+				this.log(response);
 			}
 			//if "Enable Away Auto Lock" is active set "Disable Away Auto Lock"
 			if (awayConfig['Configuration Value'][0] === 3){
-				let response = await thisVar.configurationSet({id: 'Doorlock_mode'}, 1);
-				thisVar.log(response);
+				let response = await this.configurationSet({id: 'Doorlock_mode'}, 1);
+				this.log(response);
 			}
-		}
-		
+			return Promise.resolve( true );
+		})
+
+		//Condition for checking if awaymode is active	
+		awaymodeCheckCondition.registerRunListener( async ( args, state ) => {
+			this.log('running awaymode condition');
+    		let status = false;
+			let awayConfig = await this.configurationGet({index: 1}).catch( this.error );
+			this.log(awayConfig['Configuration Value'][0]);
+			if (awayConfig['Configuration Value'][0] === 2 || awayConfig['Configuration Value'][0] === 3){
+					status = true;
+			}	
+    		this.log('Awaymode condition: Sending response', status);
+    		return Promise.resolve( status );
+  		})
+
 		this.registerCapability('locked', 'DOOR_LOCK', {
 			getOpts: {
 				getOnStart: true,
@@ -110,14 +116,9 @@ class IDlock150 extends ZwaveDevice {
 					unlockTrigger.trigger(this, {"who":user},null).catch( this.error ).then( this.log('User opened the door') )
 					}
 					if (report['Event (Parsed)'] === 'Manual Unlock Operation') {
+						this.log("Unlocked av button");
 						unlockTrigger.trigger(this, {"who":"Button"}, null).catch( this.error ).then( this.log('Homey opened the door') )
-						//wait 10 sec before disable awaymode. so the lock can handle the request 
-						setTimeout(disableAwaymode, 10000, this);
-					}
-					if (report['Event (Parsed)'] === 'Manual Lock Operation') {
-						//wait 20 sec then call function to check if away mode is activated and if active trigger flowcard.																													
-						setTimeout(getAwaymode, 20000, this);
-					}					
+					}	
 				}
 				return null;
 			}

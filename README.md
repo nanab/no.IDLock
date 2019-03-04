@@ -27,13 +27,20 @@ Triggers:
 * Door lock / unlocked
 * Generic "an alarm triggered" trigger cards from devices, with additional logic AND condition isolating device
 
- Actions:
- * Door lock / unlock
+Actions:
+* Door lock / unlock
+* Disable awaymode (There is a bug in zwave module that doesnt disable awaymode if unlocked by homey. ID Lock 150 only)
 
- ## Feedback:
- Any requests please post them in the [ID Lock app topic on the Homey community Forum](https://community.athom.com/t/161) or contact me on [Slack](https://athomcommunity.slack.com/team/tedtolboom)   
+Conditions:
+* Awaymode active (ID Lock 150 only)
+
+## Feedback:
+Any requests please post them in the [ID Lock app topic on the Homey community Forum](https://community.athom.com/t/161) or contact me on [Slack](https://athomcommunity.slack.com/team/tedtolboom)   
 
 ## Change Log:
+### V 1.2.5
+* Add support for checking if awaymode is active.
+
 ### v 1.2.0
 * Add support for registering user codes and recognizing who unlocked the door (for ID Lock 150) (credits to Mats Paulsen)      
 * Minor (cosmetical) modifications to make the app Homey SW v2.0.0 compatible      

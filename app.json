@@ -70,6 +70,22 @@
           }
         ]
       }
+    ],
+    "conditions": [
+      {
+        "id": "awaymode_check",
+        "title": {
+          "en": "If awaymode is active."
+        }
+      }
+    ],
+    "actions": [
+      {
+        "id": "awaymode_disable",
+        "title": {
+          "en": "Disable awaymode."
+        }
+      }
     ]
   },
   "drivers": [
